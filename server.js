@@ -394,19 +394,6 @@ app.post("/reports/:id/dismiss", async (req, res) => {
     }
 });
 
-// 12. DEV ONLY - remove in production
-app.post("/dev/subscribe", async (req, res) => {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ error: "Missing phone" });
-
-    try {
-        await addSubscriber(phone);
-        res.json({ success: true, phone });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // Admin login — GET: show login page (redirect to /admin if already authenticated)
 app.get("/admin/login", (req, res) => {
     if (req.session && req.session.adminAuthenticated) {
