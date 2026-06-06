@@ -232,6 +232,17 @@
       font-weight: 500;
     }
     
+    .sms-disclosures {
+      font-size: 0.8rem;
+      color: #71717a;
+      line-height: 1.6;
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: left;
+    }
+
     .legal {
       font-size: 0.7rem;
       color: #52525b;
@@ -324,10 +335,10 @@
     </div>
     
     <h1>CurveLink</h1>
-    <p class="tagline">Community Safety Network</p>
+    <p class="tagline">Gables Residential Alert Network</p>
     
     <p class="hero-text">
-      <strong>Gables Residential</strong> uses CurveLink to send residents instant SMS alerts for emergencies, maintenance updates, and important community notices. Subscribe below to stay informed.
+      Receive emergency alerts, maintenance updates, and community notifications from <strong>Gables Residential</strong>.
     </p>
     
     <div class="features">
@@ -366,7 +377,11 @@
 
         <div class="checkbox-group">
           <input type="checkbox" id="consent" name="consent" required>
-          <label for="consent">I agree to receive SMS alerts from Gables Residential, powered by CurveLink. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to cancel, HELP for help.</label>
+          <label for="consent">I agree to receive SMS alerts from Gables Residential, powered by CurveLink.</label>
+        </div>
+
+        <div class="sms-disclosures">
+          Message frequency varies &bull; Msg &amp; data rates may apply &bull; Reply STOP to cancel &bull; Reply HELP for help
         </div>
 
         <button type="submit" id="submitBtn">Activate Alerts</button>
@@ -374,7 +389,7 @@
       <div class="message" id="optInStatus"></div>
       
       <p class="legal">
-        By subscribing, you agree to our <a href="/terms.html">Terms of Service</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        By subscribing, you agree to our <a href="/terms">Terms of Service</a> &amp; <a href="/privacy">Privacy Policy</a>.
         Gables Residential will send you community safety alerts, maintenance notices, and building announcements via SMS.
         Message frequency varies. Msg &amp; data rates may apply. Text STOP to unsubscribe, HELP for support.
       </p>
@@ -385,7 +400,7 @@
     </div>
     
     <div class="powered-by">
-      <span>Gables Residential Community Alerts &middot; Operated by <strong>CurveLink</strong></span>
+      <span>Powered by <strong>CurveLink</strong> | Gables Residential</span>
     </div>
 
     <div class="footer-admin-link">

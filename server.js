@@ -433,6 +433,10 @@ app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "index.html")));
 // Serve report page
 app.get("/report", (_req, res) => res.sendFile(path.join(__dirname, "report.html")));
 
+// Serve legal pages — explicit routes prevent 502 in autoscale deployment
+app.get(["/terms", "/terms.html"], (_req, res) => res.sendFile(path.join(__dirname, "terms.html")));
+app.get(["/privacy", "/privacy.html"], (_req, res) => res.sendFile(path.join(__dirname, "privacy.html")));
+
 // 13. Global Error Handler
 app.use((err, _req, res, _next) => {
     console.error("🚨 Server Error:", err);
