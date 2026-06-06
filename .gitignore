@@ -2,3 +2,7 @@ node_modules/
 .env
 *.db
 .DS_Store
+.claude/
+.devstate
+.vscode/
+_ul
