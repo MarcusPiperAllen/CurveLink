@@ -128,10 +128,10 @@ app.post("/sms", async (req, res) => {
             }
         } else if (body === "STOP") {
             await markUserOptedOut(from);
-            twiml.message("CurveLink: You've been unsubscribed. Text START to re-subscribe.");
+            twiml.message("Gables Residential Alerts: You have been unsubscribed and will receive no further messages. Text START to re-subscribe.");
             console.log(`User ${from} opted out.`);
         } else if (body === "HELP") {
-            twiml.message("CurveLink: Reply STOP to unsubscribe. For emergencies, call 911. For help, contact your building management.");
+            twiml.message("Gables Residential Alerts (via CurveLink): Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: hello@curvelink.io");
             console.log(`User ${from} requested HELP.`);
         } else {
             twiml.message("Reply START to subscribe, REPORT <...>, HELP, or STOP.");
