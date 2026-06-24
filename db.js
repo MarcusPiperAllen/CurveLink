@@ -7,22 +7,36 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Test connection on startup
+// Run safe schema migrations
+async function runMigrations() {
+  await pool.query(`
+    ALTER TABLE subscribers
+    ADD COLUMN IF NOT EXISTS consent_given BOOLEAN NOT NULL DEFAULT false
+  `);
+  console.log("✅ Database migrations applied");
+}
+
+// Test connection on startup, then run migrations
 pool.query("SELECT NOW()")
-  .then(() => console.log("✅ PostgreSQL connected"))
-  .catch(err => console.error("❌ PostgreSQL connection error:", err.message));
+  .then(() => {
+    console.log("✅ PostgreSQL connected");
+    return runMigrations();
+  })
+  .catch(err => console.error("❌ PostgreSQL connection/migration error:", err.message));
 
 // ============ SUBSCRIBER FUNCTIONS ============
 
-async function addSubscriber(phone) {
+async function addSubscriber(phone, consentGiven = false) {
   const query = `
-    INSERT INTO subscribers (phone, status)
-    VALUES ($1, 'active')
+    INSERT INTO subscribers (phone, status, consent_given)
+    VALUES ($1, 'active', $2)
     ON CONFLICT (phone)
-    DO UPDATE SET status = 'active'
+    DO UPDATE SET
+      status = 'active',
+      consent_given = subscribers.consent_given OR EXCLUDED.consent_given
     RETURNING *
   `;
-  const result = await pool.query(query, [phone]);
+  const result = await pool.query(query, [phone, consentGiven]);
   return result.rows[0];
 }
 

@@ -2,6 +2,7 @@
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
+const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const helmet = require("helmet");
@@ -24,13 +25,16 @@ const {
 
 // 2. Initialize App & Middleware
 const app = express();
+
+// Trust first proxy hop — required for correct client IP behind Replit's proxy
+app.set('trust proxy', 1);
+
 app.use(helmet()); // Security headers
 app.use(cors({
     origin: process.env.CORS_ORIGIN
         ? process.env.CORS_ORIGIN.split(',')
         : [
-            "https://curvelinx.netlify.app",
-            "https://f50c3599-a652-4a6d-85e5-b28d4c6b6b42-00-2e9y10qe3rmg8.riker.replit.dev",
+            process.env.PUBLIC_BASE_URL || 'https://curve-link.replit.app',
             "http://localhost:5000",
             "http://127.0.0.1:5000"
           ],
@@ -41,9 +45,21 @@ app.use(cors({
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
+// Session secret guard — fail fast in production if secret is absent or insecure
+const sessionSecret = process.env.SESSION_SECRET;
+const KNOWN_INSECURE_FALLBACK = 'curvelink-fallback-secret';
+if (!sessionSecret || sessionSecret === KNOWN_INSECURE_FALLBACK) {
+    if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL: SESSION_SECRET is not set or uses the insecure default. Set SESSION_SECRET in Replit Secrets and restart.');
+        process.exit(1);
+    } else {
+        console.warn('⚠️  SESSION_SECRET is missing or insecure. Using dev fallback — do NOT run this in production.');
+    }
+}
+
 // Session middleware — uses SESSION_SECRET from Replit Secrets
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'curvelink-fallback-secret',
+    secret: sessionSecret || 'curvelink-fallback-secret-dev-only',
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -52,6 +68,23 @@ app.use(session({
         maxAge: 8 * 60 * 60 * 1000 // 8 hours
     }
 }));
+
+// Rate limiters
+const adminLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const subscribeLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many subscription attempts. Try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // Middleware: protect all /admin routes
 function requireAdminAuth(req, res, next) {
@@ -70,7 +103,7 @@ app.use((req, res, next) => {
 app.use(express.static(__dirname)); // Serve static files
 
 // 3. Verify Environment Variables
-["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "BROADCAST_API_KEY", "ADMIN_PASSWORD"].forEach(key => {
+["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "BROADCAST_API_KEY", "ADMIN_PASSWORD", "PUBLIC_BASE_URL"].forEach(key => {
     console.log(`${key}:`, process.env[key] ? "✔️" : `❌ MISSING`);
 });
 if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
@@ -93,7 +126,7 @@ function normalizePhone(raw) {
 // Subscription Helpers
 async function markUserSubscribed(phone) {
     const normalized = normalizePhone(phone);
-    await addSubscriber(normalized);
+    await addSubscriber(normalized, true); // SMS START is an explicit opt-in action
     console.log(`✅ User subscribed: ${normalized}`);
     return normalized;
 }
@@ -218,8 +251,8 @@ app.post("/sms/status", (req, res) => {
     res.sendStatus(200);
 });
 
-// 8. Subscribers & Alerts Endpoints for Frontend
-app.get("/subscribers", async (req, res) => {
+// 8. Subscribers & Alerts Endpoints for Frontend — admin session required
+app.get("/subscribers", requireAdminAuth, async (req, res) => {
     try {
         const subscribers = await getSubscribers();
         res.json({ subscribers });
@@ -229,7 +262,7 @@ app.get("/subscribers", async (req, res) => {
     }
 });
 
-app.get("/alerts", async (req, res) => {
+app.get("/alerts", requireAdminAuth, async (req, res) => {
     try {
         const messages = await getMessages();
         res.json({ messages });
@@ -239,7 +272,7 @@ app.get("/alerts", async (req, res) => {
     }
 });
 
-app.get("/reports", async (req, res) => {
+app.get("/reports", requireAdminAuth, async (req, res) => {
     try {
         const reports = await getReports();
         res.json({ reports });
@@ -250,28 +283,32 @@ app.get("/reports", async (req, res) => {
 });
 
 // 9. Public opt-in endpoint
-app.post("/api/subscribe", async (req, res) => {
-    const { phone } = req.body;
+app.post("/api/subscribe", subscribeLimiter, async (req, res) => {
+    const { phone, consent } = req.body;
 
     // Validate phone
     if (!phone || typeof phone !== "string" || !phone.trim()) {
         return res.status(400).json({ success: false, message: "Phone number is required." });
     }
 
+    // Consent must be explicitly true — a missing or false value is rejected
+    if (consent !== true) {
+        return res.status(400).json({ success: false, message: "You must provide explicit consent to receive SMS alerts." });
+    }
+
     const normalizedPhone = normalizePhone(phone.trim());
 
     try {
-        await addSubscriber(normalizedPhone);
+        await addSubscriber(normalizedPhone, true);
         console.log(`✅ New subscriber via web form: ${normalizedPhone}`);
-        
-        // Send enhanced welcome SMS
-        // Use PUBLIC_BASE_URL if set, otherwise use Netlify production URL
-        const baseUrl = process.env.PUBLIC_BASE_URL || 'https://curvelinx.netlify.app';
+
+        // Send welcome SMS using the canonical production URL
+        const baseUrl = process.env.PUBLIC_BASE_URL || 'https://curve-link.replit.app';
         const reportUrl = `${baseUrl}/report`;
         const welcomeMessage = `Welcome to CurveLink! You're now connected to Gables Residential alerts. Save this number.\n\nTo report an issue, text:\nREPORT [your message]\n\nExample: REPORT water leak in lobby\n\nOr report online: ${reportUrl}\n\nReply STOP to unsubscribe.`;
         await sendSMS(normalizedPhone, welcomeMessage);
         console.log(`📱 Welcome SMS sent to: ${normalizedPhone}`);
-        
+
         res.json({ success: true, message: "You're now subscribed to CurveLink!" });
     } catch (err) {
         console.error("❌ Subscription error:", err);
@@ -403,7 +440,7 @@ app.get("/admin/login", (req, res) => {
 });
 
 // Admin login — POST: verify password server-side only, never expose to frontend
-app.post("/admin/login", (req, res) => {
+app.post("/admin/login", adminLoginLimiter, (req, res) => {
     const { password } = req.body;
     if (password && password === process.env.ADMIN_PASSWORD) {
         req.session.adminAuthenticated = true;

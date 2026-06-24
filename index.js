@@ -18,6 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (!consentCheckbox.checked) {
+      statusDiv.textContent = "You must agree to receive SMS alerts before subscribing.";
+      statusDiv.style.color = "#d9534f";
+      return;
+    }
+
     // Disable button while submitting
     submitBtn.disabled = true;
     submitBtn.textContent = "Subscribing...";
@@ -27,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ phone, consent: consentCheckbox.checked })
       });
 
       const result = await response.json();
