@@ -137,7 +137,7 @@ function renderSubscribersTable(subscribers) {
     const statusClass = sub.status === "active" ? "color: #22c55e" : "color: #ef4444";
     const optInDate = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : "N/A";
     tr.innerHTML = `
-      <td>${sub.phone}</td>
+      <td>${maskPhone(sub.phone)}</td>
       <td>${optInDate}</td>
       <td style="${statusClass}; font-weight: 600">${status}</td>
     `;
@@ -263,7 +263,7 @@ function buildReportCard(report, isPending) {
     <div class="report-content">
       <div class="report-phone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 15a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 4.11h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        ${report.phone}
+        ${maskPhone(report.phone)}
       </div>
       <div class="report-issue">${escapeHtml(report.issue)}</div>
       <div class="report-time">Reported: ${time}</div>
@@ -289,6 +289,18 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function maskPhone(phone) {
+  if (!phone) return '—';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    const offset = digits.length === 11 ? 1 : 0;
+    const area = digits.slice(offset, offset + 3);
+    const mid = digits.slice(offset + 3, offset + 6);
+    return `+1 (${area}) ${mid}-XXXX`;
+  }
+  return phone.slice(0, -4) + 'XXXX';
 }
 
 function handleApprove(reportId, issue) {
@@ -457,6 +469,23 @@ document.addEventListener("DOMContentLoaded", () => {
       charCount.textContent = alertMessage.value.length;
     });
   }
+
+  const TEMPLATES = {
+    emergency: 'ALERT: Please be advised of an urgent community notice: ',
+    maintenance: 'Maintenance Notice: Scheduled maintenance will occur on [date/time]. ',
+    community: 'Community Update: '
+  };
+
+  document.querySelectorAll('.btn-template').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const template = TEMPLATES[btn.dataset.template];
+      if (template && alertMessage) {
+        alertMessage.value = template;
+        if (charCount) charCount.textContent = template.length;
+        alertMessage.focus();
+      }
+    });
+  });
 
   loadDashboardStats();
 });

@@ -159,11 +159,9 @@
 
     <section id="settings" class="hidden">
       <h2>Settings</h2>
-      <p class="section-desc">Configure your API credentials.</p>
-      <div class="settings-form">
-        <label for="apiKeyInput">Broadcast API Key</label>
-        <input type="password" id="apiKeyInput" placeholder="Enter your API key" />
-        <button id="saveApiKeyBtn" class="btn-primary">Save API Key</button>
+      <p class="section-desc">System configuration for CurveLink.</p>
+      <div class="settings-info">
+        <p>Integration settings are managed by your CurveLink administrator. Contact support to update SMS credentials or system configuration.</p>
       </div>
     </section>
   </main>
@@ -171,6 +169,11 @@
   <div id="newAlertModal" class="modal hidden">
     <div class="modal-content">
       <h3>Send New Broadcast</h3>
+      <div class="template-buttons">
+        <button class="btn-template" data-template="emergency">Emergency Alert</button>
+        <button class="btn-template" data-template="maintenance">Maintenance Notice</button>
+        <button class="btn-template" data-template="community">Community Update</button>
+      </div>
       <textarea id="alertMessage" placeholder="Enter your alert message..." maxlength="250"></textarea>
       <div class="char-count"><span id="charCount">0</span>/250</div>
       <div class="modal-actions">

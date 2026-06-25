@@ -14,13 +14,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!phone) {
       statusDiv.textContent = "Please enter a phone number.";
-      statusDiv.style.color = "#d9534f";
+      statusDiv.className = 'message error';
       return;
     }
 
     if (!consentCheckbox.checked) {
       statusDiv.textContent = "You must agree to receive SMS alerts before subscribing.";
-      statusDiv.style.color = "#d9534f";
+      statusDiv.className = 'message error';
       return;
     }
 
@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.disabled = true;
     submitBtn.textContent = "Subscribing...";
     statusDiv.textContent = "";
+    statusDiv.className = 'message';
 
     try {
       const response = await fetch("/api/subscribe", {
@@ -39,18 +40,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (result.success) {
-        statusDiv.textContent = result.message;
-        statusDiv.style.color = "#5cb85c";
+        statusDiv.textContent = "✅ You're subscribed! Watch for a confirmation text shortly.";
+        statusDiv.className = 'message success';
         phoneInput.value = "";
         consentCheckbox.checked = false;
       } else {
         statusDiv.textContent = result.message || "Subscription failed.";
-        statusDiv.style.color = "#d9534f";
+        statusDiv.className = 'message error';
       }
     } catch (err) {
       console.error("Subscription error:", err);
       statusDiv.textContent = "Network error. Please try again.";
-      statusDiv.style.color = "#d9534f";
+      statusDiv.className = 'message error';
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Activate Alerts";

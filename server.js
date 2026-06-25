@@ -474,6 +474,11 @@ app.get("/report", (_req, res) => res.sendFile(path.join(__dirname, "report.html
 app.get(["/terms", "/terms.html"], (_req, res) => res.sendFile(path.join(__dirname, "terms.html")));
 app.get(["/privacy", "/privacy.html"], (_req, res) => res.sendFile(path.join(__dirname, "privacy.html")));
 
+// 404 catch-all — must come after all specific routes
+app.use((_req, res) => {
+    res.status(404).sendFile(path.join(__dirname, "404.html"));
+});
+
 // 13. Global Error Handler
 app.use((err, _req, res, _next) => {
     console.error("🚨 Server Error:", err);
