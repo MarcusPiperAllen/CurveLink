@@ -421,16 +421,6 @@ function exportSubscribers() {
   alert("Export CSV feature coming soon.");
 }
 
-function saveApiKey() {
-  const apiKeyInput = document.getElementById("apiKeyInput");
-  const key = apiKeyInput.value.trim();
-  if (!key) {
-    alert("Please enter an API key.");
-    return;
-  }
-  localStorage.setItem("curve_admin_api_key", key);
-  alert("API key saved.");
-}
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Command Center initialized");
@@ -449,14 +439,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("exportSubscribersBtn")?.addEventListener("click", exportSubscribers);
   document.getElementById("refreshReportsBtn")?.addEventListener("click", loadReports);
   document.getElementById("newAlertBtn")?.addEventListener("click", showNewAlertModal);
-  document.getElementById("saveApiKeyBtn")?.addEventListener("click", saveApiKey);
-
-  const savedApiKey = localStorage.getItem("curve_admin_api_key");
-  if (savedApiKey) {
-    const apiKeyInput = document.getElementById("apiKeyInput");
-    if (apiKeyInput) apiKeyInput.value = savedApiKey;
-  }
-
   document.getElementById("sendAlertBtn")?.addEventListener("click", sendAlert);
   document.getElementById("cancelModalBtn")?.addEventListener("click", () => closeModal("newAlertModal"));
   document.getElementById("confirmBroadcastBtn")?.addEventListener("click", confirmBroadcast);
@@ -473,7 +455,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const TEMPLATES = {
     emergency: 'ALERT: Please be advised of an urgent community notice: ',
     maintenance: 'Maintenance Notice: Scheduled maintenance will occur on [date/time]. ',
-    community: 'Community Update: '
+    community: 'Community Update: Please review this important community notice: '
   };
 
   document.querySelectorAll('.btn-template').forEach(btn => {
