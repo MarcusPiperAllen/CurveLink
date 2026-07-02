@@ -148,7 +148,7 @@ app.post("/sms", async (req, res) => {
             twiml.message("Message cannot be empty. Reply START to subscribe, REPORT <...>, or STOP.");
         } else if (body === "START") {
             await markUserSubscribed(from);
-            twiml.message("CurveLink: You're now subscribed to Gables Residential alerts! Save this number.\n\nTo report an issue, reply:\nREPORT [your message]\n\nExample: REPORT suspicious person near lobby\n\nReply STOP to unsubscribe.");
+            twiml.message("CurveLink: You're now subscribed to community alerts! Save this number.\n\nTo report an issue, reply:\nREPORT [your message]\n\nExample: REPORT suspicious person near lobby\n\nReply STOP to unsubscribe.");
             console.log(`User ${from} subscribed.`);
         } else if (body.startsWith("REPORT ")) {
             const issue = req.body.Body?.trim().slice(7);
@@ -161,10 +161,10 @@ app.post("/sms", async (req, res) => {
             }
         } else if (body === "STOP") {
             await markUserOptedOut(from);
-            twiml.message("Gables Residential Alerts: You have been unsubscribed and will receive no further messages. Text START to re-subscribe.");
+            twiml.message("CurveLink Alerts: You have been unsubscribed and will receive no further messages. Text START to re-subscribe.");
             console.log(`User ${from} opted out.`);
         } else if (body === "HELP") {
-            twiml.message("Gables Residential Alerts (via CurveLink): Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: hello@curvelink.io");
+            twiml.message("CurveLink Alerts: Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: hello@curvelink.io");
             console.log(`User ${from} requested HELP.`);
         } else {
             twiml.message("Reply START to subscribe, REPORT <...>, HELP, or STOP.");
@@ -305,7 +305,7 @@ app.post("/api/subscribe", subscribeLimiter, async (req, res) => {
         // Send welcome SMS using the canonical production URL
         const baseUrl = process.env.PUBLIC_BASE_URL || 'https://curve-link.replit.app';
         const reportUrl = `${baseUrl}/report`;
-        const welcomeMessage = `Welcome to CurveLink! You're now connected to Gables Residential alerts. Save this number.\n\nTo report an issue, text:\nREPORT [your message]\n\nExample: REPORT water leak in lobby\n\nOr report online: ${reportUrl}\n\nReply STOP to unsubscribe.`;
+        const welcomeMessage = `Welcome to CurveLink! You're now connected to community alerts. Save this number.\n\nTo report an issue, text:\nREPORT [your message]\n\nExample: REPORT water leak in lobby\n\nOr report online: ${reportUrl}\n\nReply STOP to unsubscribe.`;
         await sendSMS(normalizedPhone, welcomeMessage);
         console.log(`📱 Welcome SMS sent to: ${normalizedPhone}`);
 
