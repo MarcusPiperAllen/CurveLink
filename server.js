@@ -164,7 +164,7 @@ app.post("/sms", async (req, res) => {
             twiml.message("CurveLink Alerts: You have been unsubscribed and will receive no further messages. Text START to re-subscribe.");
             console.log(`User ${from} opted out.`);
         } else if (body === "HELP") {
-            twiml.message("CurveLink Alerts: Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: hello@curvelink.io");
+            twiml.message("CurveLink Alerts: Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: marcuspiperallen@gmail.com");
             console.log(`User ${from} requested HELP.`);
         } else {
             twiml.message("Reply START to subscribe, REPORT <...>, HELP, or STOP.");
