@@ -100,7 +100,24 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.static(__dirname)); // Serve static files
+// Only these specific static asset files (JS/CSS used by the public pages)
+// are safe to serve directly. This replaces express.static(__dirname), which
+// previously served the ENTIRE project folder publicly (source files, notes,
+// package.json, attached_assets, etc.). Do not add server-side files (db.js,
+// twilio-tools.js, .env, .md files, etc.) to this list.
+const PUBLIC_STATIC_FILES = new Set([
+  "index.js",
+  "report.js",
+  "admin.js",
+  "admin-login.js",
+  "admin.css",
+]);
+app.get("/:file", (req, res, next) => {
+  if (PUBLIC_STATIC_FILES.has(req.params.file)) {
+    return res.sendFile(path.join(__dirname, req.params.file));
+  }
+  next();
+});
 
 // 3. Verify Environment Variables
 ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "BROADCAST_API_KEY", "ADMIN_PASSWORD", "PUBLIC_BASE_URL"].forEach(key => {
