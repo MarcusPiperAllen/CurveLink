@@ -165,7 +165,7 @@ app.post("/sms", async (req, res) => {
             twiml.message("Message cannot be empty. Reply START to subscribe, REPORT <...>, or STOP.");
         } else if (body === "START") {
             await markUserSubscribed(from);
-            twiml.message("CurveLink: You're now subscribed to community alerts! Save this number.\n\nTo report an issue, reply:\nREPORT [your message]\n\nExample: REPORT suspicious person near lobby\n\nReply STOP to unsubscribe.");
+            twiml.message("CurveLink Community Alerts: You are subscribed to receive property and community notices, maintenance updates, safety notices, resident announcements, and issue-report confirmations. Message frequency varies, typically 0-5 messages per month. Msg & data rates may apply. Reply STOP to unsubscribe or HELP for support.");
             console.log(`User ${from} subscribed.`);
         } else if (body.startsWith("REPORT ")) {
             const issue = req.body.Body?.trim().slice(7);
@@ -178,10 +178,10 @@ app.post("/sms", async (req, res) => {
             }
         } else if (body === "STOP") {
             await markUserOptedOut(from);
-            twiml.message("CurveLink Community Alerts: You have been unsubscribed and will receive no further messages. Text START to re-subscribe.");
+            twiml.message("CurveLink Community Alerts: You have been unsubscribed and will receive no further messages. Reply START to subscribe again.");
             console.log(`User ${from} opted out.`);
         } else if (body === "HELP") {
-            twiml.message("CurveLink Community Alerts: Community safety & maintenance notifications. Msg freq varies. Msg&Data rates may apply. Reply STOP to cancel. Support: marcuspiperallen@gmail.com");
+            twiml.message("CurveLink Community Alerts: For help, email marcuspiperallen@gmail.com or visit https://curve-link.replit.app. Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe.");
             console.log(`User ${from} requested HELP.`);
         } else {
             twiml.message("Reply START to subscribe, REPORT <...>, HELP, or STOP.");

@@ -1,7 +1,7 @@
 # CurveLink
 
 ## Overview
-A smart community notification platform built with Node.js and Express that allows building management to broadcast emergency notifications and safety alerts to subscribed residents via Twilio SMS.
+CurveLink Community Alerts is one SMS notification program operated by Marcus Piper. The program sends property and community notices, maintenance updates, safety notices, resident announcements, and issue-report confirmations to users who opt in through the public CurveLink website.
 
 ## Project Structure
 - `server.js` - Main Express server with API endpoints
