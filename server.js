@@ -319,10 +319,8 @@ app.post("/api/subscribe", subscribeLimiter, async (req, res) => {
         await addSubscriber(normalizedPhone, true);
         console.log(`✅ New subscriber via web form: ${normalizedPhone}`);
 
-        // Send welcome SMS using the canonical production URL
-        const baseUrl = process.env.PUBLIC_BASE_URL || 'https://curve-link.replit.app';
-        const reportUrl = `${baseUrl}/report`;
-        const welcomeMessage = `Welcome to CurveLink! You're now connected to community alerts. Save this number.\n\nTo report an issue, text:\nREPORT [your message]\n\nExample: REPORT water leak in lobby\n\nOr report online: ${reportUrl}\n\nReply STOP to unsubscribe.`;
+        // Send welcome SMS — identical to the START opt-in confirmation
+        const welcomeMessage = "CurveLink Community Alerts: You are subscribed to receive property and community notices, maintenance updates, safety notices, resident announcements, and issue-report confirmations. Message frequency varies, typically 0-5 messages per month. Msg & data rates may apply. Reply STOP to unsubscribe or HELP for support.";
         await sendSMS(normalizedPhone, welcomeMessage);
         console.log(`📱 Welcome SMS sent to: ${normalizedPhone}`);
 
