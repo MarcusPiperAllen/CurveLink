@@ -111,6 +111,7 @@ const PUBLIC_STATIC_FILES = new Set([
   "admin.js",
   "admin-login.js",
   "admin.css",
+  "optin-screenshot.png",
 ]);
 app.get("/:file", (req, res, next) => {
   if (PUBLIC_STATIC_FILES.has(req.params.file)) {
