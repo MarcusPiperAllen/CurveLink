@@ -12,6 +12,7 @@ const { sendSMS, broadcastSMS } = require("./twilio-tools");
 const {
   addSubscriber,
   getSubscribers,
+  getSendableSubscribers,
   removeSubscriber,
   isSubscriber,
   addMessage,
@@ -209,7 +210,8 @@ app.post("/broadcast", verifyAPIKey, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'Missing "message" field in JSON body' });
 
     try {
-        const subscribers = await getSubscribers();
+        // Consent-filtered. Never send to the raw subscriber list.
+        const subscribers = await getSendableSubscribers();
         const phoneList = subscribers.map(sub => sub.phone);
 
         if (!phoneList.length) {
@@ -386,7 +388,8 @@ app.post("/admin/broadcast", async (req, res) => {
     }
     
     try {
-        const subscribers = await getSubscribers();
+        // Consent-filtered. Never send to the raw subscriber list.
+        const subscribers = await getSendableSubscribers();
         const phoneList = subscribers.map(sub => sub.phone);
 
         if (!phoneList.length) {

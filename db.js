@@ -40,8 +40,29 @@ async function addSubscriber(phone, consentGiven = false) {
   return result.rows[0];
 }
 
+// Admin view. Returns every active subscriber, including any missing consent,
+// so the dashboard shows the true state of the list. Do NOT use this to send.
 async function getSubscribers() {
   const query = "SELECT * FROM subscribers WHERE status = 'active' ORDER BY created_at DESC";
+  const result = await pool.query(query);
+  return result.rows;
+}
+
+// Broadcast-safe list. This is the ONLY function that should feed an SMS send.
+// Three guards:
+//   1. status = 'active'          — not opted out
+//   2. consent_given = TRUE       — explicit opt-in on record (TCPA)
+//   3. phone stored in E.164      — protects a whole broadcast from one malformed row,
+//                                    which would otherwise throw Twilio error 21211
+async function getSendableSubscribers() {
+  const query = `
+    SELECT * FROM subscribers
+    WHERE status = 'active'
+      AND consent_given = TRUE
+      AND phone LIKE '+%'
+      AND char_length(phone) BETWEEN 9 AND 16
+    ORDER BY created_at DESC
+  `;
   const result = await pool.query(query);
   return result.rows;
 }
@@ -120,6 +141,7 @@ module.exports = {
   pool,
   addSubscriber,
   getSubscribers,
+  getSendableSubscribers,
   removeSubscriber,
   isSubscriber,
   addMessage,
