@@ -9,7 +9,9 @@ const helmet = require("helmet");
 const path = require("path");
 const { MessagingResponse } = require("twilio").twiml;
 const { sendSMS, broadcastSMS } = require("./twilio-tools");
+const pgSession = require("connect-pg-simple")(session);
 const {
+  pool,
   addSubscriber,
   getSubscribers,
   getSendableSubscribers,
@@ -58,8 +60,21 @@ if (!sessionSecret || sessionSecret === KNOWN_INSECURE_FALLBACK) {
     }
 }
 
-// Session middleware — uses SESSION_SECRET from Replit Secrets
+// Session middleware — uses SESSION_SECRET from Replit Secrets.
+//
+// Sessions are stored in PostgreSQL, not in server memory. This deployment runs on
+// Replit Autoscale, which means multiple instances and scale-to-zero when idle. With
+// the default MemoryStore an admin session created on one instance is not recognized
+// by another, and every cold start wipes every session — so the admin gets logged out
+// at random. Persisting to Postgres survives both. Reuses the existing pool from db.js
+// rather than opening a second connection.
 app.use(session({
+    store: new pgSession({
+        pool: pool,
+        tableName: 'session',
+        createTableIfMissing: true,
+        pruneSessionInterval: 60 * 60 // clear expired rows hourly
+    }),
     secret: sessionSecret || 'curvelink-fallback-secret-dev-only',
     resave: false,
     saveUninitialized: false,
