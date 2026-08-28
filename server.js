@@ -7,8 +7,10 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const path = require("path");
-const { MessagingResponse } = require("twilio").twiml;
+const twilio = require("twilio");
+const { MessagingResponse } = twilio.twiml;
 const { sendSMS, broadcastSMS } = require("./twilio-tools");
+const { getCorsOrigins, getHelpMessage, mapTwilioStatus } = require("./migration-config");
 const pgSession = require("connect-pg-simple")(session);
 const {
   pool,
@@ -29,18 +31,12 @@ const {
 // 2. Initialize App & Middleware
 const app = express();
 
-// Trust first proxy hop — required for correct client IP behind Replit's proxy
+// Trust first proxy hop — required for correct client IP behind the hosting proxy
 app.set('trust proxy', 1);
 
 app.use(helmet()); // Security headers
 app.use(cors({
-    origin: process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',')
-        : [
-            process.env.PUBLIC_BASE_URL || 'https://curve-link.replit.app',
-            "http://localhost:5000",
-            "http://127.0.0.1:5000"
-          ],
+    origin: getCorsOrigins(),
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
     credentials: true
@@ -48,26 +44,29 @@ app.use(cors({
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
+// Twilio signs each webhook request. Disable validation only in automated tests.
+const validateTwilioWebhook = twilio.webhook({
+    validate: process.env.NODE_ENV !== "test"
+});
+
 // Session secret guard — fail fast in production if secret is absent or insecure
 const sessionSecret = process.env.SESSION_SECRET;
 const KNOWN_INSECURE_FALLBACK = 'curvelink-fallback-secret';
 if (!sessionSecret || sessionSecret === KNOWN_INSECURE_FALLBACK) {
     if (process.env.NODE_ENV === 'production') {
-        console.error('FATAL: SESSION_SECRET is not set or uses the insecure default. Set SESSION_SECRET in Replit Secrets and restart.');
+        console.error('FATAL: SESSION_SECRET is not set or uses the insecure default. Set SESSION_SECRET in the deployment environment and restart.');
         process.exit(1);
     } else {
         console.warn('⚠️  SESSION_SECRET is missing or insecure. Using dev fallback — do NOT run this in production.');
     }
 }
 
-// Session middleware — uses SESSION_SECRET from Replit Secrets.
+// Session middleware — uses SESSION_SECRET from the deployment environment.
 //
-// Sessions are stored in PostgreSQL, not in server memory. This deployment runs on
-// Replit Autoscale, which means multiple instances and scale-to-zero when idle. With
-// the default MemoryStore an admin session created on one instance is not recognized
-// by another, and every cold start wipes every session — so the admin gets logged out
-// at random. Persisting to Postgres survives both. Reuses the existing pool from db.js
-// rather than opening a second connection.
+// Sessions are stored in PostgreSQL, not in server memory. Serverless hosting can run
+// multiple instances and scale to zero when idle. The default MemoryStore would not
+// preserve an admin login reliably across instances or cold starts. Reuse the existing
+// pool from db.js rather than opening a second connection.
 app.use(session({
     store: new pgSession({
         pool: pool,
@@ -172,7 +171,7 @@ async function markUserOptedOut(phone) {
 }
 
 // 5. SMS Webhook (Handles Incoming Texts from Twilio)
-app.post("/sms", async (req, res) => {
+app.post("/sms", validateTwilioWebhook, async (req, res) => {
     const twiml = new MessagingResponse();
     const from = req.body.From;
     let body = req.body.Body?.trim().toUpperCase();
@@ -198,7 +197,7 @@ app.post("/sms", async (req, res) => {
             twiml.message("CurveLink Community Alerts: You have been unsubscribed and will receive no further messages. Reply START to subscribe again.");
             console.log(`User ${from} opted out.`);
         } else if (body === "HELP") {
-            twiml.message("CurveLink Community Alerts: For help, email marcuspiperallen@gmail.com or visit https://curve-link.replit.app. Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe.");
+            twiml.message(getHelpMessage());
             console.log(`User ${from} requested HELP.`);
         } else {
             twiml.message("Reply START to subscribe, REPORT <...>, HELP, or STOP.");
@@ -242,7 +241,7 @@ app.post("/broadcast", verifyAPIKey, async (req, res) => {
         }
 
         // Send SMS
-        const results = await broadcastSMS(phoneList, message);
+        const results = await broadcastSMS(phoneList, message, messageId);
 
         // Update recipient status in DB based on results
         for (const r of results) {
@@ -268,22 +267,33 @@ app.post("/broadcast", verifyAPIKey, async (req, res) => {
 });
 
 // 7. Twilio Status Callback Webhook
-app.post("/sms/status", (req, res) => {
+app.post("/sms/status", validateTwilioWebhook, async (req, res) => {
     const { MessageSid, MessageStatus, To, ErrorCode } = req.body;
+    const messageId = Number.parseInt(req.query.messageId, 10);
 
     console.log(`📬 Status update: ${MessageSid} → ${MessageStatus} (${To})`);
 
-    // Map Twilio status to our status
-    let dbStatus = "pending";
-    if (MessageStatus === "delivered") dbStatus = "delivered";
-    else if (MessageStatus === "sent") dbStatus = "sent";
-    else if (["failed", "undelivered"].includes(MessageStatus)) dbStatus = "failed";
+    if (!Number.isInteger(messageId) || messageId <= 0 || !To) {
+        console.warn("⚠️ Ignoring malformed Twilio status callback");
+        return res.sendStatus(400);
+    }
+
+    const dbStatus = mapTwilioStatus(MessageStatus);
 
     if (ErrorCode) {
         console.error(`❌ Delivery error for ${To}: ${ErrorCode}`);
     }
 
-    res.sendStatus(200);
+    try {
+        const updatedRows = await updateRecipientStatus(messageId, normalizePhone(To), dbStatus);
+        if (updatedRows === 0) {
+            console.warn(`⚠️ No recipient row matched message ${messageId}`);
+        }
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("❌ Failed to persist Twilio status callback:", error);
+        res.sendStatus(500);
+    }
 });
 
 // 8. Subscribers & Alerts Endpoints for Frontend — admin session required
@@ -417,7 +427,7 @@ app.post("/admin/broadcast", async (req, res) => {
             await linkMessageToRecipient(messageId, phone, "pending");
         }
 
-        const results = await broadcastSMS(phoneList, message);
+        const results = await broadcastSMS(phoneList, message, messageId);
 
         for (const r of results) {
             let status = "pending";

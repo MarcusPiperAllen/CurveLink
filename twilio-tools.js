@@ -1,8 +1,11 @@
 require('dotenv').config();
+const { buildStatusCallbackUrl } = require('./migration-config');
 
 const now = () => new Date().toISOString();
 
-const SANDBOX_MODE = process.env.NODE_ENV === 'development';
+const SANDBOX_MODE =
+  process.env.SMS_SANDBOX_MODE === 'true' ||
+  process.env.NODE_ENV === 'development';
 const TWILIO_CONFIGURED = !!(
   process.env.TWILIO_ACCOUNT_SID &&
   process.env.TWILIO_AUTH_TOKEN &&
@@ -53,9 +56,9 @@ async function sendWelcomeSMS(phone) {
   return sendSMS(phone, body);
 }
 
-async function broadcastSMS(phones, message) {
+async function broadcastSMS(phones, message, messageId) {
   const results = [];
-  const statusCallback = process.env.STATUS_CALLBACK_URL || null;
+  const statusCallback = buildStatusCallbackUrl(process.env.STATUS_CALLBACK_URL, messageId);
 
   for (let to of phones) {
     if (SANDBOX_MODE) {

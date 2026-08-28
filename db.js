@@ -112,7 +112,8 @@ async function getMessages() {
 
 async function updateRecipientStatus(messageId, phone, status) {
   const query = "UPDATE message_recipients SET status = $1 WHERE message_id = $2 AND phone = $3";
-  await pool.query(query, [status, messageId, phone]);
+  const result = await pool.query(query, [status, messageId, phone]);
+  return result.rowCount;
 }
 
 // ============ REPORT FUNCTIONS ============
