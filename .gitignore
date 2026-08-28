@@ -8,3 +8,5 @@ node_modules/
 .devstate
 .vscode/
 _ul
+.env.local
+.env.*.local
