@@ -99,7 +99,7 @@ async function getMessages() {
       m.body,
       m.created_at,
       COUNT(mr.id) as total_recipients,
-      SUM(CASE WHEN mr.status = 'sent' THEN 1 ELSE 0 END) as delivered,
+      SUM(CASE WHEN mr.status = 'delivered' THEN 1 ELSE 0 END) as delivered,
       SUM(CASE WHEN mr.status = 'failed' THEN 1 ELSE 0 END) as failed
     FROM messages m
     LEFT JOIN message_recipients mr ON m.id = mr.message_id
